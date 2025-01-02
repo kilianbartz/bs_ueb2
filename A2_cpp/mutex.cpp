@@ -28,7 +28,7 @@ void thread_function(int id, int iterations)
 
 int main()
 {
-    const int iterations = 1000;
+    const int iterations = 100'000'000;
 
     // Zeitmessung starten
     auto start = std::chrono::high_resolution_clock::now();
