@@ -29,7 +29,7 @@ int main()
     zmq::socket_t socket(context, zmq::socket_type::req);
     socket.connect("inproc://test");
 
-    const int num_messages = 100'000'000;
+    const int num_messages = 1'000'000;
     auto start = std::chrono::high_resolution_clock::now();
 
     for (int i = 0; i < num_messages; ++i)
@@ -45,7 +45,7 @@ int main()
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double, std::micro> elapsed = end - start;
 
-    std::cout << "Average latency (inproc): " << elapsed.count() / num_messages << " µs" << std::endl;
+    std::cout << "Average time per iteration: " << elapsed.count() / num_messages << " microseconds" << std::endl;
 
     server.join();
     return 0;

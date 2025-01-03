@@ -71,7 +71,7 @@ int main()
 
     if (pid > 0)
     { // Parent process
-        std::cout << "Total time: " << elapsed.count() << " microseconds" << std::endl;
+        // std::cout << "Total time: " << elapsed.count() << " microseconds" << std::endl;
         std::cout << "Average time per iteration: " << elapsed.count() / (2 * iterations) << " microseconds" << std::endl;
 
         // Clean up shared memory

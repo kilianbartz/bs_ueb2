@@ -28,7 +28,7 @@ void thread_function(int id, int iterations)
 
 int main()
 {
-    const int iterations = 100'000'000;
+    const int iterations = 1'000'000;
 
     // Zeitmessung starten
     auto start = std::chrono::high_resolution_clock::now();
@@ -45,7 +45,7 @@ int main()
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double, std::micro> elapsed = end - start;
 
-    std::cout << "Total time: " << elapsed.count() << " microseconds" << std::endl;
+    // std::cout << "Total time: " << elapsed.count() << " microseconds" << std::endl;
     std::cout << "Average time per iteration: " << elapsed.count() / (2 * iterations) << " microseconds" << std::endl;
 
     return 0;
