@@ -23,8 +23,8 @@ int main()
 
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double, std::micro> elapsed = end - start;
-
-    std::cout << "Average latency (ipc): " << elapsed.count() / num_messages << " µs" << std::endl;
+    std::cout << elapsed.count() / num_messages / 2 << std::endl;
+    // std::cout << "Average latency (ipc): " << elapsed.count() / num_messages << " µs" << std::endl;
 
     return 0;
 }

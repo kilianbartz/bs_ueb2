@@ -44,8 +44,9 @@ int main()
 
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double, std::micro> elapsed = end - start;
+    std::cout << elapsed.count() / num_messages / 2 << std::endl;
 
-    std::cout << "Average time per iteration: " << elapsed.count() / num_messages << " microseconds" << std::endl;
+    // std::cout << "Average time per iteration: " << elapsed.count() / num_messages << " microseconds" << std::endl;
 
     server.join();
     return 0;
