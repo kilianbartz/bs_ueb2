@@ -1,82 +1,110 @@
 #include <iostream>
 #include <atomic>
-#include <thread>
-#include <sys/mman.h>
-#include <fcntl.h>
-#include <unistd.h>
 #include <chrono>
-#include <sys/wait.h>
+#include <x86intrin.h> // For __rdtsc()
+#include <sys/mman.h>  // For mmap
+#include <unistd.h>    // For fork, getpid
+#include <cstring>     // For memset
+#include <sys/wait.h>  // For wait
 
 struct SharedMemory
 {
     std::atomic_flag spinlock = ATOMIC_FLAG_INIT;
     int shared_data = 0;
+    long start = 0;
+    long times = 0;
+    int iterations_finished = 0;
 };
 
-void process_function(SharedMemory *shm, int id, int iterations)
+void process_function(SharedMemory *shm, int iterations)
 {
-    for (int i = 0; i < iterations; ++i)
+    while (shm->iterations_finished < iterations)
     {
         // Acquire the spinlock
         while (shm->spinlock.test_and_set(std::memory_order_acquire))
-            ; // Busy waiting
+            ;
 
-        // Critical section
-        // shm->shared_data++;
-        // std::cout << "Process " << id << " incremented shared_data to " << shm->shared_data << std::endl;
+        if (shm->shared_data > 0)
+        {
+            auto end = __rdtsc();
+            shm->times += end - shm->start;
+            shm->iterations_finished++;
+            shm->shared_data = 0;
+        }
 
         // Release the spinlock
         shm->spinlock.clear(std::memory_order_release);
     }
+
+    std::cout << "Average time per iteration: " << shm->times / iterations << " cycles" << std::endl;
 }
 
-int main()
+int main(int argc, char *argv[])
 {
-    const char *shm_name = "/my_shared_memory";
-    const int shm_size = sizeof(SharedMemory);
-    const int iterations = 100'000'000;
+    // Check if the number of iterations is provided as a command-line argument
+    if (argc != 2)
+    {
+        std::cerr << "Usage: " << argv[0] << " <number_of_iterations>" << std::endl;
+        return 1;
+    }
 
+    // Convert the argument to an integer
+    int iterations = std::atoi(argv[1]);
+    if (iterations <= 0)
+    {
+        std::cerr << "Error: The number of iterations must be a positive integer." << std::endl;
+        return 1;
+    }
     // Create shared memory
-    int shm_fd = shm_open(shm_name, O_CREAT | O_RDWR, 0666);
-    ftruncate(shm_fd, shm_size);
-    SharedMemory *shm = (SharedMemory *)mmap(nullptr, shm_size, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
+    SharedMemory *shm = static_cast<SharedMemory *>(mmap(
+        nullptr, sizeof(SharedMemory), PROT_READ | PROT_WRITE,
+        MAP_SHARED | MAP_ANONYMOUS, -1, 0));
 
     if (shm == MAP_FAILED)
     {
-        perror("mmap failed");
+        perror("mmap");
         return 1;
     }
 
     // Initialize shared memory
-    new (shm) SharedMemory();
+    memset(shm, 0, sizeof(SharedMemory));
+    shm->spinlock.clear(std::memory_order_release);
 
-    auto start = std::chrono::high_resolution_clock::now();
-
-    // Fork processes
     pid_t pid = fork();
+    if (pid == -1)
+    {
+        perror("fork");
+        munmap(shm, sizeof(SharedMemory));
+        return 1;
+    }
+
     if (pid == 0)
     {
         // Child process
-        process_function(shm, 1, iterations);
+        process_function(shm, iterations);
+        munmap(shm, sizeof(SharedMemory));
+        return 0;
     }
     else
     {
         // Parent process
-        process_function(shm, 2, iterations);
-        wait(nullptr); // Wait for child process
-    }
+        while (shm->iterations_finished < iterations)
+        {
+            // Acquire the spinlock
+            while (shm->spinlock.test_and_set(std::memory_order_acquire))
+                ;
 
-    auto end = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double, std::micro> elapsed = end - start;
+            shm->start = __rdtsc();
+            shm->shared_data = 42;
 
-    if (pid > 0)
-    { // Parent process
-        // std::cout << "Total time: " << elapsed.count() << " microseconds" << std::endl;
-        std::cout << "Average time per iteration: " << elapsed.count() / (2 * iterations) << " microseconds" << std::endl;
+            // Release the spinlock
+            shm->spinlock.clear(std::memory_order_release);
+        }
 
-        // Clean up shared memory
-        munmap(shm, shm_size);
-        shm_unlink(shm_name);
+        // Wait for the child process to finish
+        wait(nullptr);
+
+        munmap(shm, sizeof(SharedMemory));
     }
 
     return 0;

@@ -7,7 +7,7 @@ from pathlib import Path
 def compile_program(file_path):
     """Compiles a C++ program and returns the output executable name."""
     executable = Path(file_path).stem  # Use the file name without extension as the executable name
-    compile_command = ["g++", "-std=c++17", "-O2", file_path, "-o", executable]
+    compile_command = ["g++", "-std=c++20", "-O2", file_path, "-o", executable, "-lzmq"]
     try:
         subprocess.run(compile_command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         return executable
@@ -18,7 +18,7 @@ def compile_program(file_path):
 def run_program(executable):
     """Runs the compiled program and captures its output."""
     try:
-        command = ["sudo", "chrt", "-r", 90, f"./{executable}"]
+        command = [f"./{executable}"]
         result = subprocess.run(command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         output = result.stdout.decode().strip()
         return output
