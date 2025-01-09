@@ -5,6 +5,8 @@ import sys
 import argparse
 import os
 
+CPU_FREQ = 5.44e9
+
 def read_measurements(file_path):
     """Read measurements from either JSON or TXT file"""
     ext = os.path.splitext(file_path)[1].lower()
@@ -22,8 +24,7 @@ def read_measurements(file_path):
         raise ValueError(f"Unsupported file format: {ext}")
 
 def calculate_confidence_interval(data, confidence=0.95):
-    # Convert to nanoseconds (multiply by 1000)
-    data_ns = [x * 1000 for x in data]
+    data_ns = [x * 1000000000 for x in data]
     n = len(data_ns)
     mean = np.mean(data_ns)
     se = stats.sem(data_ns)
@@ -51,6 +52,7 @@ def print_latex_table(data_dict):
 def main():
     parser = argparse.ArgumentParser(description='Calculate confidence intervals from measurement files')
     parser.add_argument('files', nargs='+', help='Path to measurement files (JSON or TXT)')
+    parser.add_argument('--convert-from-cycles', action='store_true', help='Convert measurements from cycles to nanoseconds')
 
     args = parser.parse_args()
 
@@ -60,6 +62,11 @@ def main():
         for file_path in args.files:
             data = read_measurements(file_path)
             combined_data.update(data)
+
+        if args.convert_from_cycles:
+            for category, measurements in combined_data.items():
+                combined_data[category] = [x / CPU_FREQ for x in measurements]
+        
 
         # Print regular table
         print("95% Confidence Intervals:")
