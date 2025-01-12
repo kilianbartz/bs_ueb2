@@ -4,8 +4,8 @@
 #include <chrono>
 #include <x86intrin.h> // For __rdtsc()
 
-std::binary_semaphore semaphore_main(0);   // Semaphore for the main thread
-std::binary_semaphore semaphore_worker(0); // Semaphore for the worker thread
+std::binary_semaphore semaphore_server(0); // Semaphore for the server
+std::binary_semaphore semaphore_client(0); // Semaphore for the client thread
 int shared_data = 0;
 
 long start, times = 0;
@@ -15,8 +15,8 @@ void thread_function(int iterations)
 {
     while (iterations_finished < iterations)
     {
-        // Wait for the main thread to signal
-        semaphore_worker.acquire();
+        // Wait for the server to signal
+        semaphore_client.acquire();
         if (shared_data > 0)
         {
             auto end = __rdtsc();
@@ -24,8 +24,8 @@ void thread_function(int iterations)
             iterations_finished++;
             shared_data = 0;
         }
-        // Signal the main thread
-        semaphore_main.release();
+        // Signal the server
+        semaphore_server.release();
     }
     std::cout << "Average time per iteration: " << times / iterations << " cycles" << std::endl;
 }
@@ -50,12 +50,12 @@ int main(int argc, char *argv[])
 
     while (iterations_finished < iterations)
     {
+        semaphore_server.acquire();
         start = __rdtsc();
         shared_data = 42;
-        // Signal the worker thread
-        semaphore_worker.release();
-        // Wait for the worker thread to process
-        semaphore_main.acquire();
+        // Signal the client thread
+        semaphore_client.release();
+        // Wait for the client thread to process
     }
     t1.join();
     return 0;

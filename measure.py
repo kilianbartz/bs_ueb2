@@ -18,7 +18,7 @@ def compile_program(file_path):
 def run_program(executable):
     """Runs the compiled program and captures its output."""
     try:
-        command = [f"./{executable}"]
+        command = [f"./{executable}", "1000000"]
         result = subprocess.run(command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         output = result.stdout.decode().strip()
         return output
